@@ -92,6 +92,37 @@ class User < ApplicationRecord
                      OR user_id = :user_id", user_id: id)
   end
 
+  # static_pages用のキーワード検索できるフィード
+  def feed_on_static_pages_controller(keyword)
+    following_ids = "SELECT followed_id FROM relationships
+                     WHERE  follower_id = :user_id"
+
+    str = "dummy"
+    if keyword == nil || keyword == ""
+      str = ""
+    elsif keyword.present?
+      str = "AND content LIKE '%#{keyword}%'"
+    else
+      raise Exception("本来は到達しない")
+    end
+
+    Micropost.where("user_id IN (#{following_ids}) OR user_id = :user_id #{str}", user_id: id)
+  end
+
+  # デモ用の投稿を初期状態に戻す（デモ時に書き換えることがあるため）
+  #   管理用なのでrails consoleから使う
+  def User.reset_demo_post
+    User.all.each do |user|
+      if user.email == "test@example.com"
+        user.microposts.each do |post|
+          post.content = "デモ用の投稿です👍"
+          post.updated_at = "2018/05/01 00:00:01"
+          post.save
+        end
+      end
+    end
+  end
+
   # Follows a user.
   def follow(other_user)
     following << other_user unless self == other_user
